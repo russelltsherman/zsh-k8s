@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+# shellcheck disable=SC1090
+# shellcheck disable=SC2034
+# shellcheck disable=SC2086
+# shellcheck disable=SC2128
+# shellcheck disable=SC2154
+
+set -e
+set -o pipefail
+
+DIR="$( cd "$( dirname $0:A )" && pwd )"
+source "${DIR}/../kube_fzf.sh" 
+
+_kube_fzf_pfpod() {
+  local namespace_query pod_query port result namespace pod_name open copy
+
+  _kube_fzf_handler "pfpod" "$@"
+  IFS=$'|' read -r namespace_query pod_query port open copy <<< "$args"
+
+  result=$(_kube_fzf_search_pod "$namespace_query" "$pod_query")
+  IFS=$'|' read -r namespace pod_name <<< "$result"
+
+  local fzf_args
+  fzf_args=$(_kube_fzf_fzf_args "" "--select-1")
+
+  _kube_fzf_echo "kubectl port-forward --namespace='$namespace' $pod_name $port"
+  IFS=':' read -ra splitted_port <<< $port
+  $copy && _kube_fzf_copy_to_clipboard $splitted_port
+  $open && _kube_fzf_open_in_browser $splitted_port
+  kubectl port-forward --namespace=$namespace $pod_name $port
+}
+
+_kube_fzf_open_in_browser() {
+  (sleep 3 && echo "Opening localhost:$1" && open "http://localhost:$1") &
+}
+
+_kube_fzf_copy_to_clipboard() {
+  copier=$noop
+  command -v xclip >/dev/null 2>&1 && {
+    copier=xclip
+  }
+  command -v pbcopy >/dev/null 2>&1 && {
+    copier=pbcopy
+  }
+  echo "http://localhost:$1" | $copier
+}
+
+_kube_fzf_pfpod "$@"
