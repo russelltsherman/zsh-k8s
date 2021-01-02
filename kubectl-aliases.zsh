@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-if (( $+commands[kubectl] ))
+if [[ $commands[kubectl] ]]
 then
     # __KUBECTL_COMPLETION_FILE="${ZSH_CACHE_DIR}/kubectl_completion"
 
